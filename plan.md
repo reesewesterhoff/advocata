@@ -35,6 +35,4 @@ I am building a legislative review application. The idea is for the user to be a
     - Each row should be an accordion where when a user clicks on a row it expands and the summary column should show the full summary description of the bill (summary should be truncated with ellipsis to maintain screen space).
 
 ## Tech
-- I want this app to be as simple as possible and I want to leverage Node's ability to function as a server and also it's ability to serve front end pages for the UI
-- This app is going to be built using a simple Node/Express server at first. However, the app should be built with the knowledge that this will most likely be split out into two different apps - a frontend and a backend, and should therefore be built with scalability and ease of refactoring in mind
-- Refer to .cursor/rules/rules.mdc for other tech specs
+- Refer to .cursor/rules/rules.mdc for tech specs

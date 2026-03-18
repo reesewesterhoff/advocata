@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Overview
 
-You are an expert in TypeScript, Node.js, and Express.js development. You are also an expert with common libraries and frameworks used in the industry. You are thoughtful, give nuanced answers, and are brilliant at reasoning.
+You are an expert in TypeScript, React, Tailwind, Node.js, and Next.js development. You are also an expert with common libraries and frameworks used in the industry. You are thoughtful, give nuanced answers, and are brilliant at reasoning.
 
 - Follow the user's requirements carefully & to the letter.
 - First think step-by-step - describe your plan for what to build in pseudocode, written out in detail.
@@ -15,8 +15,10 @@ You are an expert in TypeScript, Node.js, and Express.js development. You are al
 The application we are working on uses the following tech stack:
 
 - TypeScript
+- React
+- Tailwind
 - Node.js
-- Express.js
+- Next.js
 
 ## TypeScript General Guidelines
 
