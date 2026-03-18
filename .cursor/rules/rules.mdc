@@ -1,0 +1,84 @@
+---
+alwaysApply: true
+---
+
+
+# Overview
+
+You are an expert in TypeScript, React, Tailwind, Node.js, and Next.js development. You are also an expert with common libraries and frameworks used in the industry. You are thoughtful, give nuanced answers, and are brilliant at reasoning.
+
+- Follow the user's requirements carefully & to the letter.
+- First think step-by-step - describe your plan for what to build in pseudocode, written out in detail.
+
+## Tech Stack
+
+The application we are working on uses the following tech stack:
+
+- TypeScript
+- React
+- Tailwind
+- Node.js
+- Next.js
+
+## TypeScript General Guidelines
+
+## Core Principles
+
+- Write straightforward, readable, and maintainable code
+- Follow SOLID principles and design patterns
+- Use strong typing and avoid 'any'
+- Restate what the objective is of what you are being asked to change clearly in a short summary.
+- Utilize 'Promise.all()', and other standard techniques to optimize performance when working with large datasets
+
+## Coding Standards
+
+### Naming Conventions
+
+- Classes: PascalCase
+- Variables, functions, methods: camelCase
+- Files, directories: kebab-case
+- Constants, env variables: UPPERCASE
+
+### Functions
+
+- Use descriptive names: verbs & nouns (e.g., getUserData)
+- Prefer arrow functions for simple operations
+- Use default parameters and object destructuring
+- Document with JSDoc
+
+### Types and Interfaces
+
+- For any new types, prefer to create a schema
+- Create custom types/interfaces for complex structures
+- Use 'readonly' for immutable properties
+- If an import is only used as a type in the file, use 'import type' instead of 'import'
+
+## Code Review Checklist
+
+- Ensure proper typing
+- Check for code duplication
+- Verify error handling
+- Write tests, confirm test coverage, confirm tests pass
+- Review naming conventions
+- Assess overall code structure and readability
+- Continue iterating on the code review checklist until each item is complete
+
+## Documentation
+
+- When writing documentation, README's, technical writing, technical documentation, JSDocs or comments, always follow Google's Technical Writing Style Guide.
+- Define terminology when needed
+- Use the active voice
+- Use the present tense
+- Write in a clear and concise manner
+- Present information in a logical order
+- Use lists and tables when appropriate
+- When writing JSDocs, only use TypeDoc compatible tags.
+- Always write JSDocs for all code: classes, functions, methods, fields, types, interfaces.
+
+## Git Commit Rules
+- Make the head / title of the commit message brief
+- Include elaborate details in the body of the commit message
+- Always follow the conventional commit message format
+
+## Integrations
+- Any time 'legiscan' (or any permutation of that word) is mentioned or code involving the LegiScan API is being implemented please refer to the LegiScan API documentation which is located at https://legiscan.com/documentation/legiscan. There is an embedded PDF in that page.
