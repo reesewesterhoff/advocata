@@ -57,6 +57,8 @@ The application we are working on uses the following tech stack:
 
 - Ensure proper typing
 - Check for code duplication
+- Check for unnecessary element nesting in tsx files
+- Check for unnecessary Tailwind classes and remove them
 - Verify error handling
 - Write tests, confirm test coverage, confirm tests pass
 - Review naming conventions
