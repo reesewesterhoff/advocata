@@ -79,6 +79,30 @@ export const USER_CONTEXT_MAX_LENGTH = 2000;
 export const QUERY_MAX_LENGTH = 500;
 
 /**
+ * Zod schema for the `/api/search` endpoint payload.
+ * This route only needs LegiScan search criteria and does not require
+ * AI-provider-specific fields.
+ */
+export const SearchRequestSchema = z.object({
+  /**
+   * LegiScan state filter.
+   * Use "ALL" for all states or "US" for US Congress.
+   */
+  state: z.enum(STATE_OPTIONS),
+  /** Full-text search query sent to LegiScan. */
+  query: z
+    .string()
+    .min(1, "Search query is required.")
+    .max(
+      QUERY_MAX_LENGTH,
+      `Search query must be ${QUERY_MAX_LENGTH} characters or fewer.`,
+    ),
+});
+
+/** The validated payload shape accepted by `/api/search`. */
+export type SearchRequestInput = z.infer<typeof SearchRequestSchema>;
+
+/**
  * Zod schema for the search form input submitted by the user.
  * Validated on the server before any external API calls are made.
  */
