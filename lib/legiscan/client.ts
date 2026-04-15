@@ -110,8 +110,6 @@ async function runBounded<T>(
 ): Promise<T[]> {
   const results: T[] = new Array(tasks.length);
   let nextIndex = 0;
-  console.log("tasks", tasks);
-  console.log("concurrency", concurrency);
 
   async function worker(): Promise<void> {
     while (nextIndex < tasks.length) {
