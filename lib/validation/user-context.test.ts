@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { validateUserContext } from "./user-context";
-import { USER_CONTEXT_MAX_LENGTH } from "@/lib/domain/search";
+import { USER_CONTEXT_MAX_LENGTH } from "@/lib/domain";
 
 describe("validateUserContext", () => {
   // -------------------------------------------------------------------------

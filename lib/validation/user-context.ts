@@ -1,4 +1,4 @@
-import { USER_CONTEXT_MAX_LENGTH } from "@/lib/domain/search";
+import { USER_CONTEXT_MAX_LENGTH } from "@/lib/domain";
 
 /** Result of a user context validation check. */
 export interface UserContextValidationResult {
