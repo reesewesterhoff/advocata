@@ -19,7 +19,7 @@
 ## Phase Checklist
 
 - [x] Phase 1 - Foundation + Contracts
-- [ ] Phase 2 - LegiScan Server Integration
+- [x] Phase 2 - LegiScan Server Integration
 - [ ] Phase 3 - Unified AI Layer (Gemini + Claude)
 - [ ] Phase 4 - Search Form + Submission UX
 - [ ] Phase 5 - Raw LegiScan Data Table
