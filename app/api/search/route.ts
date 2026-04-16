@@ -1,45 +1,12 @@
 import { type NextRequest, NextResponse } from "next/server";
 
 import { SearchRequestSchema } from "@/lib/domain/search";
-import { LegiScanError, LEGISCAN_ERROR_CODES, searchAndNormalize } from "@/lib/legiscan";
-import { checkRateLimit } from "@/lib/rate-limit";
-
-// ---------------------------------------------------------------------------
-// Response helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Extracts the best-effort client IP from the incoming request headers.
- * Prefers the `x-forwarded-for` header (set by proxies / App Runner), then
- * falls back to `x-real-ip`, and finally to a sentinel value when neither is
- * present (e.g. local development without a proxy).
- *
- * @param request - The incoming Next.js request.
- * @returns The client IP string to use as the rate-limit key.
- */
-function getClientIp(request: NextRequest): string {
-  const forwarded = request.headers.get("x-forwarded-for");
-  if (forwarded) {
-    return forwarded.split(",")[0].trim();
-  }
-  return request.headers.get("x-real-ip") ?? "unknown";
-}
-
-/**
- * Builds a standardized JSON error response.
- *
- * @param message - Human-readable error message.
- * @param status - HTTP status code.
- * @param extra - Optional additional fields merged into the response body.
- * @returns A NextResponse carrying the JSON error payload.
- */
-function errorResponse(
-  message: string,
-  status: number,
-  extra?: Record<string, unknown>,
-): NextResponse {
-  return NextResponse.json({ error: message, ...extra }, { status });
-}
+import { errorResponse, rateLimitGate } from "@/lib/http";
+import {
+  LegiScanError,
+  LEGISCAN_ERROR_CODES,
+  searchAndNormalize,
+} from "@/lib/legiscan";
 
 // ---------------------------------------------------------------------------
 // POST /api/search
@@ -59,20 +26,8 @@ function errorResponse(
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
   // --- Rate limiting ---
-  const ip = getClientIp(request);
-  try {
-    const { allowed, retryAfter } = await checkRateLimit(ip);
-    if (!allowed) {
-      return errorResponse(
-        "Too many requests. Please wait before trying again.",
-        429,
-        { retryAfter },
-      );
-    }
-  } catch {
-    // Fail open when the rate-limit backend is unavailable so search remains
-    // accessible during transient Upstash outages.
-  }
+  const rateLimitResponse = await rateLimitGate(request);
+  if (rateLimitResponse) return rateLimitResponse;
 
   // --- Parse + validate request body ---
   let body: unknown;
@@ -114,6 +69,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         502,
       );
     }
-    return errorResponse("An unexpected error occurred. Please try again.", 500);
+    return errorResponse(
+      "An unexpected error occurred. Please try again.",
+      500,
+    );
   }
 }

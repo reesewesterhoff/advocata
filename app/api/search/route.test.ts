@@ -12,11 +12,18 @@ vi.mock("@/lib/rate-limit", () => ({
   checkRateLimit: vi.fn(),
 }));
 
-vi.mock("@/lib/legiscan", () => ({
-  searchAndNormalize: vi.fn(),
-  LegiScanError,
-  LEGISCAN_ERROR_CODES,
-}));
+// Use importOriginal to avoid the Vitest TDZ hoisting issue: vi.mock factories
+// are hoisted before import statements, so referencing imported values (e.g.
+// LegiScanError, LEGISCAN_ERROR_CODES) directly inside the factory causes a
+// ReferenceError. Spreading the real module and overriding only what needs
+// mocking gives the factory access to the actual exports at call time.
+vi.mock("@/lib/legiscan", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/legiscan")>();
+  return {
+    ...actual,
+    searchAndNormalize: vi.fn(),
+  };
+});
 
 import { checkRateLimit } from "@/lib/rate-limit";
 import { searchAndNormalize } from "@/lib/legiscan";
