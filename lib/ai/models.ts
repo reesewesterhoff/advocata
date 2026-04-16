@@ -1,4 +1,4 @@
-import type { AiProvider } from "@/lib/domain/search";
+import type { AiProvider } from "@/lib/domain";
 
 /** Metadata for a single AI model available in the application. */
 export interface AiModel {

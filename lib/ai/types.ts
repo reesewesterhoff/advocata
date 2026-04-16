@@ -1,5 +1,4 @@
-import type { AiProvider } from "@/lib/domain/search";
-import type { AiAnalysisOutput, BillForAnalysis } from "@/lib/domain/ai";
+import type { AiAnalysisOutput, AiProvider, BillForAnalysis } from "@/lib/domain";
 
 /** Input passed to an AI adapter's analyzeBills method. */
 export interface AnalyzeBillsInput {

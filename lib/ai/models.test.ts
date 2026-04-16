@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { MODEL_REGISTRY, getModelsForProvider, getDefaultModel, findModel } from "./models";
-import { AI_PROVIDERS } from "@/lib/domain/search";
+import { AI_PROVIDERS } from "@/lib/domain";
 
 describe("MODEL_REGISTRY", () => {
   it("has an entry for every supported AI provider", () => {

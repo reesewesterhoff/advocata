@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  SearchRequestSchema,
   SearchFormInputSchema,
   STATE_OPTIONS,
   AI_PROVIDERS,
@@ -17,6 +18,48 @@ const VALID_INPUT = {
   aiKey: "test-api-key",
   userContext: "I am an environmental policy researcher.",
 } as const;
+
+/** A fully valid /api/search payload fixture. */
+const VALID_SEARCH_REQUEST = {
+  state: "CA",
+  query: "climate change",
+} as const;
+
+describe("SearchRequestSchema", () => {
+  it("accepts a valid search-only payload", () => {
+    const result = SearchRequestSchema.safeParse(VALID_SEARCH_REQUEST);
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects payloads missing query", () => {
+    const result = SearchRequestSchema.safeParse({ state: "CA" });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects payloads with an invalid state option", () => {
+    const result = SearchRequestSchema.safeParse({ ...VALID_SEARCH_REQUEST, state: "XX" });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects payloads with query longer than QUERY_MAX_LENGTH", () => {
+    const result = SearchRequestSchema.safeParse({
+      ...VALID_SEARCH_REQUEST,
+      query: "a".repeat(QUERY_MAX_LENGTH + 1),
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts payloads that include extra AI fields", () => {
+    const result = SearchRequestSchema.safeParse({
+      ...VALID_SEARCH_REQUEST,
+      aiProvider: "gemini",
+      aiModel: "gemini-2.5-flash",
+      aiKey: "test-key",
+      userContext: "Policy analyst context.",
+    });
+    expect(result.success).toBe(true);
+  });
+});
 
 describe("SearchFormInputSchema", () => {
   it("accepts a fully valid input object", () => {

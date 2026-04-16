@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { NormalizedBill } from "@/lib/domain/legiscan";
+import type { NormalizedBill } from "./legiscan";
 
 /** Zod schema for a single AI-generated bill ranking entry. */
 export const AiRankingRowSchema = z.object({
