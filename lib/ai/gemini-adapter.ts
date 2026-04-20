@@ -38,6 +38,160 @@ const RESPONSE_SCHEMA = {
   required: ["rankings", "error"],
 };
 
+type GeminiStructuredError = {
+  readonly providerMessage: string | null;
+  readonly reasonTokens: readonly string[];
+};
+
+/**
+ * Returns true when a string clearly signals context/input length overflow.
+ *
+ * @param text - Free-form error text to inspect.
+ * @returns True when the text indicates context/token overflow.
+ */
+function hasContextWindowSignal(text: string): boolean {
+  const lowerCaseMessage = text.toLowerCase();
+
+  if (lowerCaseMessage.includes("context window")) return true;
+  if (lowerCaseMessage.includes("maximum context length")) return true;
+  if (lowerCaseMessage.includes("too many tokens")) return true;
+  if (
+    (lowerCaseMessage.includes("token count") ||
+      lowerCaseMessage.includes("token limit") ||
+      lowerCaseMessage.includes("token length")) &&
+    (lowerCaseMessage.includes("too long") ||
+      lowerCaseMessage.includes("exceed") ||
+      lowerCaseMessage.includes("max"))
+  ) {
+    return true;
+  }
+  if (
+    (lowerCaseMessage.includes("prompt") || lowerCaseMessage.includes("input")) &&
+    lowerCaseMessage.includes("too long")
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Recursively collects values from properties named `reason` in a JSON value.
+ *
+ * @param value - Unknown parsed JSON node.
+ * @param sink - Mutable sink for discovered reason strings.
+ */
+function collectReasonStrings(value: unknown, sink: string[]): void {
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      collectReasonStrings(item, sink);
+    }
+    return;
+  }
+
+  if (value !== null && typeof value === "object") {
+    for (const [key, child] of Object.entries(value)) {
+      if (key === "reason" && typeof child === "string") {
+        sink.push(child.toLowerCase());
+      }
+      collectReasonStrings(child, sink);
+    }
+  }
+}
+
+/**
+ * Parses a Gemini API error message that may contain JSON response payload.
+ *
+ * @param message - Raw ApiError message.
+ * @returns Structured error metadata when parsable, else null.
+ */
+function parseGeminiStructuredError(message: string): GeminiStructuredError | null {
+  try {
+    const parsed = JSON.parse(message) as unknown;
+    if (parsed === null || typeof parsed !== "object") {
+      return null;
+    }
+
+    const root = parsed as Record<string, unknown>;
+    const errorNode =
+      root.error !== null && typeof root.error === "object"
+        ? (root.error as Record<string, unknown>)
+        : root;
+
+    const reasonTokens: string[] = [];
+    collectReasonStrings(errorNode.details, reasonTokens);
+
+    const providerMessage =
+      typeof errorNode.message === "string" ? errorNode.message : null;
+
+    return { providerMessage, reasonTokens };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Determines whether a Gemini error indicates an invalid API key.
+ *
+ * Stage 1: inspect structured reason tokens from a parsed JSON payload.
+ * Stage 2: fallback to legacy text matching for non-JSON error messages.
+ *
+ * @param message - Raw provider error message.
+ * @param structured - Parsed structured error metadata, if available.
+ * @returns True when the error indicates an invalid API key.
+ */
+function isApiKeyInvalidError(
+  message: string,
+  structured: GeminiStructuredError | null,
+): boolean {
+  if (structured?.reasonTokens.includes("api_key_invalid")) {
+    return true;
+  }
+
+  const lowerCaseMessage = message.toLowerCase();
+  return (
+    lowerCaseMessage.includes("api_key_invalid") ||
+    lowerCaseMessage.includes("api key not valid")
+  );
+}
+
+/**
+ * Determines whether a Gemini 400 error message indicates an input context
+ * window overflow.
+ *
+ * Stage 1: inspect structured fields from a JSON error payload (details/reason
+ * and provider message).
+ * Stage 2: fallback to guarded message heuristics for non-JSON errors.
+ *
+ * @param message - Raw provider error message.
+ * @param structured - Parsed structured error metadata, if available.
+ * @returns True when the message clearly indicates prompt/context overflow.
+ */
+function isContextWindowError(
+  message: string,
+  structured: GeminiStructuredError | null,
+): boolean {
+  if (
+    structured?.reasonTokens.some(
+      (reason) =>
+        hasContextWindowSignal(reason) ||
+        ((reason.includes("token") || reason.includes("context")) &&
+          (reason.includes("exceed") ||
+            reason.includes("limit") ||
+            reason.includes("max") ||
+            reason.includes("too_long"))),
+    )
+  ) {
+    return true;
+  }
+
+  if (structured?.providerMessage && hasContextWindowSignal(structured.providerMessage)) {
+    return true;
+  }
+
+  return hasContextWindowSignal(message);
+}
+
 // ---------------------------------------------------------------------------
 // Adapter
 // ---------------------------------------------------------------------------
@@ -97,14 +251,11 @@ export class GeminiAdapter implements AiAdapter {
         }
 
         if (err.status === 400) {
-          const lowerCaseMessage = err.message.toLowerCase();
+          const structured = parseGeminiStructuredError(err.message);
 
           // Gemini returns 400 with API_KEY_INVALID for invalid API keys,
           // not 401/403 as one might expect.
-          if (
-            lowerCaseMessage.includes("api_key_invalid") ||
-            lowerCaseMessage.includes("api key not valid")
-          ) {
+          if (isApiKeyInvalidError(err.message, structured)) {
             throw new AiAdapterError(
               AI_ADAPTER_ERROR_CODES.AUTH_ERROR,
               "The Gemini API key is invalid or lacks permission.",
@@ -112,13 +263,8 @@ export class GeminiAdapter implements AiAdapter {
             );
           }
 
-          // 400 with a token/size message → prompt exceeded the context window.
-          if (
-            lowerCaseMessage.includes("context window") ||
-            lowerCaseMessage.includes("too long") ||
-            lowerCaseMessage.includes("token") ||
-            lowerCaseMessage.includes("exceeds")
-          ) {
+          // 400 with a clear input-size signal → prompt exceeded context window.
+          if (isContextWindowError(err.message, structured)) {
             return {
               rankings: [],
               error: AI_ERROR_CODES.CONTEXT_WINDOW_EXCEEDED,

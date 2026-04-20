@@ -257,6 +257,70 @@ describe("GeminiAdapter", () => {
       expect(output.error).toBe(AI_ERROR_CODES.CONTEXT_WINDOW_EXCEEDED);
     });
 
+    it("returns CONTEXT_WINDOW_EXCEEDED from structured 400 details even when text is generic", async () => {
+      mockGenerateContent.mockRejectedValueOnce(
+        new ApiError({
+          message: JSON.stringify({
+            error: {
+              code: 400,
+              status: "INVALID_ARGUMENT",
+              message: "Request contains an invalid argument.",
+              details: [
+                {
+                  "@type": "type.googleapis.com/google.rpc.ErrorInfo",
+                  reason: "INPUT_TOKEN_LIMIT_EXCEEDED",
+                },
+              ],
+            },
+          }),
+          status: 400,
+        }),
+      );
+
+      const output = await adapter.analyzeBills(BASE_INPUT);
+
+      expect(output.error).toBe(AI_ERROR_CODES.CONTEXT_WINDOW_EXCEEDED);
+    });
+
+    it("throws AiAdapterError(PROVIDER_ERROR) when 400 only mentions output size exceeding a limit", async () => {
+      mockGenerateContent.mockRejectedValueOnce(
+        new ApiError({
+          message: "Response size exceeds limit.",
+          status: 400,
+        }),
+      );
+
+      await expect(adapter.analyzeBills(BASE_INPUT)).rejects.toMatchObject({
+        code: AI_ADAPTER_ERROR_CODES.PROVIDER_ERROR,
+      });
+    });
+
+    it("throws AiAdapterError(PROVIDER_ERROR) when 400 mentions tool declarations exceeding a maximum", async () => {
+      mockGenerateContent.mockRejectedValueOnce(
+        new ApiError({
+          message: "Number of tool declarations exceeds maximum allowed.",
+          status: 400,
+        }),
+      );
+
+      await expect(adapter.analyzeBills(BASE_INPUT)).rejects.toMatchObject({
+        code: AI_ADAPTER_ERROR_CODES.PROVIDER_ERROR,
+      });
+    });
+
+    it("throws AiAdapterError(PROVIDER_ERROR) when 400 includes token wording unrelated to token count", async () => {
+      mockGenerateContent.mockRejectedValueOnce(
+        new ApiError({
+          message: "Tool token is malformed for function declaration.",
+          status: 400,
+        }),
+      );
+
+      await expect(adapter.analyzeBills(BASE_INPUT)).rejects.toMatchObject({
+        code: AI_ADAPTER_ERROR_CODES.PROVIDER_ERROR,
+      });
+    });
+
     it("throws AiAdapterError(PROVIDER_ERROR) on an unrelated 400 ApiError", async () => {
       mockGenerateContent.mockRejectedValueOnce(
         new ApiError({ message: "Invalid model specified.", status: 400 }),
