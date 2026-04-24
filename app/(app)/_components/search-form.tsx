@@ -11,7 +11,7 @@ import {
   STATE_OPTIONS,
   USER_CONTEXT_MAX_LENGTH,
 } from "@/lib/domain";
-import type { RequestStage } from "../_hooks/use-legiscan-search";
+import type { RequestStage } from "../_hooks/use-bill-analysis-pipeline";
 import { FormField } from "./form-field";
 
 /** Base Tailwind classes shared by every form control. */
@@ -64,7 +64,7 @@ const toFieldErrorMap = (
 
 /**
  * Renders the search form fields and delegates submission to the
- * `useLegiScanSearch` hook via the `onSubmit` prop.
+ * `useBillAnalysisPipeline` hook via the `onSubmit` prop.
  *
  * Owns only local field state and client-side validation error messages.
  */

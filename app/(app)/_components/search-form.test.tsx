@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { SearchForm } from "./search-form";
-import type { RequestStage } from "../_hooks/use-legiscan-search";
+import type { RequestStage } from "../_hooks/use-bill-analysis-pipeline";
 
 /**
  * Builds the required props for `SearchForm` with sensible defaults.
