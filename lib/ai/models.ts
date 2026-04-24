@@ -12,6 +12,15 @@ export interface AiModel {
 export type ModelRegistry = Readonly<Record<AiProvider, readonly AiModel[]>>;
 
 /**
+ * Human-readable display labels for every supported AI provider.
+ * Used in dropdowns and other UI surfaces.
+ */
+export const PROVIDER_LABELS: Readonly<Record<AiProvider, string>> = {
+  gemini: "Gemini",
+  claude: "Claude",
+};
+
+/**
  * Hardcoded model registry for all supported AI providers.
  * The first entry for each provider is the default selection.
  * Dynamic enumeration via provider APIs is deferred to a future phase.
