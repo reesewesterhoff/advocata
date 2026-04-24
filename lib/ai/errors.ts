@@ -9,6 +9,11 @@ export const AI_ADAPTER_ERROR_CODES = {
   NETWORK_ERROR: "AI_ADAPTER_NETWORK_ERROR",
   /** The provider returned an unexpected non-network error. */
   PROVIDER_ERROR: "AI_ADAPTER_PROVIDER_ERROR",
+  /**
+   * The provider/model is temporarily unavailable due to high demand or rate limiting.
+   * The request may succeed if retried after a short delay.
+   */
+  SERVICE_UNAVAILABLE: "AI_ADAPTER_SERVICE_UNAVAILABLE",
 } as const;
 
 /** A structured error code string from the AI adapter layer. */

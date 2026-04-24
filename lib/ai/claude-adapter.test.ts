@@ -299,5 +299,35 @@ describe("ClaudeAdapter", () => {
         code: AI_ADAPTER_ERROR_CODES.PROVIDER_ERROR,
       });
     });
+
+    it("throws AiAdapterError(SERVICE_UNAVAILABLE) on a 429 APIError", async () => {
+      mockCreate.mockRejectedValueOnce(
+        new Anthropic.APIError("Rate limit exceeded", 429),
+      );
+
+      await expect(adapter.analyzeBills(BASE_INPUT)).rejects.toMatchObject({
+        code: AI_ADAPTER_ERROR_CODES.SERVICE_UNAVAILABLE,
+      });
+    });
+
+    it("throws AiAdapterError(SERVICE_UNAVAILABLE) on a 503 APIError", async () => {
+      mockCreate.mockRejectedValueOnce(
+        new Anthropic.APIError("Service unavailable", 503),
+      );
+
+      await expect(adapter.analyzeBills(BASE_INPUT)).rejects.toMatchObject({
+        code: AI_ADAPTER_ERROR_CODES.SERVICE_UNAVAILABLE,
+      });
+    });
+
+    it("throws AiAdapterError(SERVICE_UNAVAILABLE) on a 529 APIError", async () => {
+      mockCreate.mockRejectedValueOnce(
+        new Anthropic.APIError("Overloaded", 529),
+      );
+
+      await expect(adapter.analyzeBills(BASE_INPUT)).rejects.toMatchObject({
+        code: AI_ADAPTER_ERROR_CODES.SERVICE_UNAVAILABLE,
+      });
+    });
   });
 });
