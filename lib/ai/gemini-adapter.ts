@@ -66,7 +66,8 @@ function hasContextWindowSignal(text: string): boolean {
     return true;
   }
   if (
-    (lowerCaseMessage.includes("prompt") || lowerCaseMessage.includes("input")) &&
+    (lowerCaseMessage.includes("prompt") ||
+      lowerCaseMessage.includes("input")) &&
     lowerCaseMessage.includes("too long")
   ) {
     return true;
@@ -105,7 +106,9 @@ function collectReasonStrings(value: unknown, sink: string[]): void {
  * @param message - Raw ApiError message.
  * @returns Structured error metadata when parsable, else null.
  */
-function parseGeminiStructuredError(message: string): GeminiStructuredError | null {
+function parseGeminiStructuredError(
+  message: string,
+): GeminiStructuredError | null {
   try {
     const parsed = JSON.parse(message) as unknown;
     if (parsed === null || typeof parsed !== "object") {
@@ -185,7 +188,10 @@ function isContextWindowError(
     return true;
   }
 
-  if (structured?.providerMessage && hasContextWindowSignal(structured.providerMessage)) {
+  if (
+    structured?.providerMessage &&
+    hasContextWindowSignal(structured.providerMessage)
+  ) {
     return true;
   }
 
@@ -270,6 +276,16 @@ export class GeminiAdapter implements AiAdapter {
               error: AI_ERROR_CODES.CONTEXT_WINDOW_EXCEEDED,
             };
           }
+        }
+
+        // 429 = rate limited; 503 = service temporarily unavailable (high demand).
+        // Both are transient — the caller should surface a retry message.
+        if (err.status === 429 || err.status === 503) {
+          throw new AiAdapterError(
+            AI_ADAPTER_ERROR_CODES.SERVICE_UNAVAILABLE,
+            "The selected Gemini model is temporarily unavailable due to high demand.",
+            err,
+          );
         }
 
         throw new AiAdapterError(

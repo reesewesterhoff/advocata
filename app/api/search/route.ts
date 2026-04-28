@@ -7,6 +7,7 @@ import {
   LEGISCAN_ERROR_CODES,
   searchAndNormalize,
 } from "@/lib/legiscan";
+import { logger } from "@/lib/logger";
 
 // ---------------------------------------------------------------------------
 // POST /api/search
@@ -53,22 +54,28 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   } catch (err) {
     if (err instanceof LegiScanError) {
       if (err.code === LEGISCAN_ERROR_CODES.TIMEOUT) {
+        logger.warn("LegiScan request timed out", { state, message: err.message });
         return errorResponse(
           "The LegiScan API did not respond in time. Please try again.",
           504,
         );
       }
       if (err.code === LEGISCAN_ERROR_CODES.NETWORK_ERROR) {
+        logger.error("Network error contacting LegiScan", { message: err.message });
         return errorResponse(
           "A network error occurred while contacting LegiScan. Please try again.",
           502,
         );
       }
+      logger.error("LegiScan returned an unexpected error", { message: err.message });
       return errorResponse(
         "LegiScan returned an unexpected error. Please try again.",
         502,
       );
     }
+    logger.error("Unhandled error in POST /api/search", {
+      error: err instanceof Error ? err.message : String(err),
+    });
     return errorResponse(
       "An unexpected error occurred. Please try again.",
       500,

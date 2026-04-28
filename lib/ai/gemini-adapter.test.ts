@@ -341,6 +341,29 @@ describe("GeminiAdapter", () => {
       });
     });
 
+    it("throws AiAdapterError(SERVICE_UNAVAILABLE) on a 429 ApiError", async () => {
+      mockGenerateContent.mockRejectedValueOnce(
+        new ApiError({ message: "Rate limit exceeded.", status: 429 }),
+      );
+
+      await expect(adapter.analyzeBills(BASE_INPUT)).rejects.toMatchObject({
+        code: AI_ADAPTER_ERROR_CODES.SERVICE_UNAVAILABLE,
+      });
+    });
+
+    it("throws AiAdapterError(SERVICE_UNAVAILABLE) on a 503 ApiError", async () => {
+      mockGenerateContent.mockRejectedValueOnce(
+        new ApiError({
+          message: "This model is currently experiencing high demand.",
+          status: 503,
+        }),
+      );
+
+      await expect(adapter.analyzeBills(BASE_INPUT)).rejects.toMatchObject({
+        code: AI_ADAPTER_ERROR_CODES.SERVICE_UNAVAILABLE,
+      });
+    });
+
     it("throws AiAdapterError(NETWORK_ERROR) on a non-ApiError (network failure)", async () => {
       mockGenerateContent.mockRejectedValueOnce(
         new Error("ENOTFOUND api.generativelanguage.googleapis.com"),

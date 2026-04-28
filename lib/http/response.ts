@@ -1,6 +1,17 @@
 import { NextResponse } from "next/server";
 
 /**
+ * The JSON shape of every error response produced by `errorResponse`.
+ * Clients use this type when parsing non-2xx fetch responses.
+ */
+export type ApiErrorResponse = {
+  /** Human-readable error message. */
+  readonly error?: string;
+  /** Field-level validation errors, keyed by field name. Present on 422 responses. */
+  readonly details?: Record<string, string[] | undefined>;
+};
+
+/**
  * Builds a standardized JSON error response.
  *
  * All API error responses share a common shape: an `error` string field

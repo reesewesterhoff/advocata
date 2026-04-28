@@ -177,6 +177,16 @@ export class ClaudeAdapter implements AiAdapter {
       }
 
       if (err instanceof Anthropic.APIError) {
+        // 429 = rate limited; 503 = service unavailable; 529 = overloaded.
+        // All three are transient — the caller should surface a retry message.
+        if (err.status === 429 || err.status === 503 || err.status === 529) {
+          throw new AiAdapterError(
+            AI_ADAPTER_ERROR_CODES.SERVICE_UNAVAILABLE,
+            "The selected Claude model is temporarily unavailable due to high demand.",
+            err,
+          );
+        }
+
         throw new AiAdapterError(
           AI_ADAPTER_ERROR_CODES.PROVIDER_ERROR,
           "The Claude API returned an unexpected error.",

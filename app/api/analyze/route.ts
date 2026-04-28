@@ -4,6 +4,7 @@ import { AnalyzeRequestSchema, AI_ERROR_CODES } from "@/lib/domain";
 import { AI_ADAPTER_ERROR_CODES, AiAdapterError, getAdapter } from "@/lib/ai";
 import { findModel } from "@/lib/ai/models";
 import { errorResponse, rateLimitGate } from "@/lib/http";
+import { logger } from "@/lib/logger";
 import { validateUserContext } from "@/lib/validation/user-context";
 
 // ---------------------------------------------------------------------------
@@ -50,6 +51,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   // --- Validate user context safety guardrails ---
   const userContextValidation = validateUserContext(userContext);
   if (!userContextValidation.valid) {
+    logger.warn("User context failed pre-flight policy check", {
+      provider: aiProvider,
+      model: aiModel,
+      reason: userContextValidation.reason,
+    });
     return errorResponse("The request was rejected by the AI policy.", 422, {
       code: AI_ERROR_CODES.DISALLOWED_REQUEST,
       reason: userContextValidation.reason,
@@ -79,6 +85,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Surface policy-level errors to the client with a structured code.
     if (output.error !== null) {
       if (output.error === AI_ERROR_CODES.DISALLOWED_REQUEST) {
+        logger.warn("AI model flagged the request as disallowed", {
+          provider: aiProvider,
+          model: aiModel,
+        });
         return errorResponse(
           "The request was rejected by the AI policy.",
           422,
@@ -86,6 +96,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         );
       }
       if (output.error === AI_ERROR_CODES.CONTEXT_WINDOW_EXCEEDED) {
+        logger.warn("Request exceeded the model context window", {
+          provider: aiProvider,
+          model: aiModel,
+        });
         return errorResponse(
           "The request exceeded the model's context window. Narrow your search and try again.",
           422,
@@ -93,6 +107,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         );
       }
       // INVALID_RESPONSE or any unexpected AI error code.
+      logger.error("AI returned an invalid or unexpected response", {
+        provider: aiProvider,
+        model: aiModel,
+        code: output.error,
+      });
       return errorResponse(
         "The AI returned an invalid response. Please try again.",
         500,
@@ -104,23 +123,54 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   } catch (err) {
     if (err instanceof AiAdapterError) {
       if (err.code === AI_ADAPTER_ERROR_CODES.AUTH_ERROR) {
+        logger.warn("AI provider rejected the API key", {
+          provider: aiProvider,
+          model: aiModel,
+          message: err.message,
+        });
         return errorResponse(
           "The provided API key is invalid or lacks permission.",
           401,
         );
       }
       if (err.code === AI_ADAPTER_ERROR_CODES.NETWORK_ERROR) {
+        logger.error("Network error contacting AI provider", {
+          provider: aiProvider,
+          model: aiModel,
+          message: err.message,
+        });
         return errorResponse(
           "A network error occurred while contacting the AI provider. Please try again.",
           502,
         );
       }
+      if (err.code === AI_ADAPTER_ERROR_CODES.SERVICE_UNAVAILABLE) {
+        logger.warn("AI model temporarily unavailable", {
+          provider: aiProvider,
+          model: aiModel,
+          message: err.message,
+        });
+        return errorResponse(
+          "The selected model is temporarily unavailable due to high demand. Please try again or select a different model.",
+          503,
+        );
+      }
       // PROVIDER_ERROR
+      logger.error("AI provider returned an unexpected error", {
+        provider: aiProvider,
+        model: aiModel,
+        message: err.message,
+      });
       return errorResponse(
         "The AI provider returned an unexpected error. Please try again.",
         502,
       );
     }
+    logger.error("Unhandled error in POST /api/analyze", {
+      provider: aiProvider,
+      model: aiModel,
+      error: err instanceof Error ? err.message : String(err),
+    });
     return errorResponse(
       "An unexpected error occurred. Please try again.",
       500,

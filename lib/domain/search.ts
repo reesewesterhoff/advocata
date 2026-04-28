@@ -59,12 +59,72 @@ export const US_STATES = [
 
 /**
  * All valid LegiScan state filter values.
- * Includes the 50 US states, "ALL" (search all states), and "US" (US Congress).
+ * "US" and "ALL" appear first, followed by the 50 state abbreviations in
+ * alphabetical order — matching the intended dropdown display order.
  */
-export const STATE_OPTIONS = [...US_STATES, "ALL", "US"] as const;
+export const STATE_OPTIONS = ["US", "ALL", ...US_STATES] as const;
 
 /** A valid LegiScan state filter value. */
 export type StateOption = (typeof STATE_OPTIONS)[number];
+
+/**
+ * Human-readable display labels for every valid LegiScan state filter value.
+ * Used in dropdowns, table cells, and accessibility strings.
+ */
+export const STATE_LABELS: Readonly<Record<StateOption, string>> = {
+  US: "US Congress",
+  ALL: "All States",
+  AL: "Alabama",
+  AK: "Alaska",
+  AZ: "Arizona",
+  AR: "Arkansas",
+  CA: "California",
+  CO: "Colorado",
+  CT: "Connecticut",
+  DE: "Delaware",
+  FL: "Florida",
+  GA: "Georgia",
+  HI: "Hawaii",
+  ID: "Idaho",
+  IL: "Illinois",
+  IN: "Indiana",
+  IA: "Iowa",
+  KS: "Kansas",
+  KY: "Kentucky",
+  LA: "Louisiana",
+  ME: "Maine",
+  MD: "Maryland",
+  MA: "Massachusetts",
+  MI: "Michigan",
+  MN: "Minnesota",
+  MS: "Mississippi",
+  MO: "Missouri",
+  MT: "Montana",
+  NE: "Nebraska",
+  NV: "Nevada",
+  NH: "New Hampshire",
+  NJ: "New Jersey",
+  NM: "New Mexico",
+  NY: "New York",
+  NC: "North Carolina",
+  ND: "North Dakota",
+  OH: "Ohio",
+  OK: "Oklahoma",
+  OR: "Oregon",
+  PA: "Pennsylvania",
+  RI: "Rhode Island",
+  SC: "South Carolina",
+  SD: "South Dakota",
+  TN: "Tennessee",
+  TX: "Texas",
+  UT: "Utah",
+  VT: "Vermont",
+  VA: "Virginia",
+  WA: "Washington",
+  WV: "West Virginia",
+  WI: "Wisconsin",
+  WY: "Wyoming",
+};
 
 /** Supported AI provider identifiers. */
 export const AI_PROVIDERS = ["gemini", "claude"] as const;
@@ -92,6 +152,7 @@ export const SearchRequestSchema = z.object({
   /** Full-text search query sent to LegiScan. */
   query: z
     .string()
+    .trim()
     .min(1, "Search query is required.")
     .max(
       QUERY_MAX_LENGTH,
@@ -115,6 +176,7 @@ export const SearchFormInputSchema = z.object({
   /** Full-text search query sent to LegiScan. */
   query: z
     .string()
+    .trim()
     .min(1, "Search query is required.")
     .max(
       QUERY_MAX_LENGTH,
@@ -125,10 +187,11 @@ export const SearchFormInputSchema = z.object({
   /** Model ID for the selected provider. */
   aiModel: z.string().min(1, "Model selection is required."),
   /** User-provided AI API key. Never persisted or logged. */
-  aiKey: z.string().min(1, "API key is required."),
+  aiKey: z.string().trim().min(1, "API key is required."),
   /** Plain-text description of who the user is and what they are looking for. */
   userContext: z
     .string()
+    .trim()
     .min(1, "User context is required.")
     .max(
       USER_CONTEXT_MAX_LENGTH,
