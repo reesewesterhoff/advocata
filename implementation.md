@@ -24,6 +24,7 @@
 - [x] Phase 4 - Search Form + Submission UX
 - [x] Phase 5 - Raw LegiScan Data Table
 - [ ] Phase 6 - AI Interpretation Table + Accordion Rows
+- [ ] Phase 6.5 - Clerk Authentication + User Identity
 - [ ] Phase 7 - Full-Text Enrichment (v1.1)
 - [ ] Phase 8 - Hardening + Quality Pass
 - [ ] Phase 9 - Deployment (AWS App Runner + ECR)
@@ -36,6 +37,13 @@
 - `getSearch` supports `state`+`query` (or `id`+`query` for session search), optional `year`, optional `page`.
 - `getBill` returns detailed bill records used for summary/title/status/links.
 - `getBillText` returns base64 `doc` payload; v1 uses summary fields, and v1.1 decodes/extracts full text for Top 10 bills.
+
+### Clerk operations needed in Phase 6.5
+
+- Clerk's Next.js App Router setup requires `@clerk/nextjs`, `ClerkProvider` at the app root, Clerk environment variables, and sign-in/sign-up routes.
+- Clerk middleware does not protect routes by default. Protected routes must be opted in with `createRouteMatcher()` and `auth.protect()`.
+- Clerk's current Next.js guidance prefers a root `proxy.ts` file for newer Next.js versions; projects on older Next.js versions may still use `middleware.ts`.
+- Server code should use Clerk server helpers to read `userId` inside protected routes rather than trusting client-provided user identifiers.
 
 ### Concrete response contracts
 
@@ -232,6 +240,12 @@ Each phase ends with review/sign-off before proceeding.
 | `LEGISCAN_API_KEY` | Yes | LegiScan API key. Server-side only. Never exposed to the client. |
 | `UPSTASH_REDIS_REST_URL` | Yes | Upstash Redis REST endpoint URL for rate limiting. |
 | `UPSTASH_REDIS_REST_TOKEN` | Yes | Upstash Redis REST token for rate limiting. |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Yes, starting Phase 6.5 | Clerk publishable key used by the browser SDK. Safe to expose because Clerk prefixes it as public configuration. |
+| `CLERK_SECRET_KEY` | Yes, starting Phase 6.5 | Clerk server secret key. Server-side only. Never expose to the client or logs. |
+| `NEXT_PUBLIC_CLERK_SIGN_IN_URL` | Yes, starting Phase 6.5 | App sign-in route, expected default: `/sign-in`. |
+| `NEXT_PUBLIC_CLERK_SIGN_UP_URL` | Yes, starting Phase 6.5 | App sign-up route, expected default: `/sign-up`. |
+| `NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL` | Yes, starting Phase 6.5 | Route Clerk redirects to after sign-in when no return URL exists, expected default: `/search`. |
+| `NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL` | Yes, starting Phase 6.5 | Route Clerk redirects to after sign-up when no return URL exists, expected default: `/search`. |
 | `NEXT_PUBLIC_APP_URL` | No | Canonical public URL of the deployed app (e.g. `https://advocata.example.com`). Used for absolute URL construction. |
 
 ### Phase 2 - LegiScan Server Integration
@@ -306,6 +320,37 @@ Each phase ends with review/sign-off before proceeding.
 - Add mismatch handling when AI references unknown bill IDs.
 - Sign-off checkpoint: confirm ranking presentation and accordion behavior.
 
+### Phase 6.5 - Clerk Authentication + User Identity
+
+- Add Clerk's Next.js SDK and baseline app wiring:
+  - install `@clerk/nextjs`
+  - wrap the root app layout with `ClerkProvider`
+  - create Clerk-hosted sign-in and sign-up routes under the App Router, expected paths: `/sign-in/[[...sign-in]]` and `/sign-up/[[...sign-up]]`
+  - add Clerk environment variables to `.env.example` and deployment secret documentation
+- Protect application routes after the Phase 6 app flow is complete:
+  - keep marketing/public routes unauthenticated
+  - require auth for the app route group under `app/(app)`, including `/search`
+  - require auth for product API routes that perform bill search or AI analysis
+  - leave public health/deployment endpoints unauthenticated, including `/api/health`
+- Implement Clerk middleware using Clerk's current Next.js guidance:
+  - use `clerkMiddleware()` and `createRouteMatcher()` from `@clerk/nextjs/server`
+  - prefer Clerk's current root `proxy.ts` convention for newer Next.js versions; use `middleware.ts` only if the installed Next.js version still expects middleware
+  - define explicit public route matchers for marketing pages, Clerk auth pages, static assets, and health checks
+  - call `auth.protect()` only for protected app and product API routes
+- Add user identity to server behavior:
+  - read the current user with Clerk's server helpers in protected API routes
+  - include `userId` in rate-limit keys so Phase 6.5 can move from IP-only limits to a user-aware limit while retaining IP fallback for unauthenticated public routes
+  - never expose Clerk secret keys, session tokens, or raw auth headers to the client, AI prompts, logs, or error payloads
+- Update UI for authenticated state:
+  - add a minimal app header with Clerk `UserButton`
+  - show sign-in/sign-up actions only on public marketing pages
+  - verify unauthenticated users are redirected back to the originally requested protected route after sign-in
+- Add tests and verification:
+  - middleware matcher tests for public, protected, and API routes
+  - protected API route tests that cover missing auth and authenticated request paths
+  - manual browser verification for sign-up, sign-in, sign-out, protected route redirects, and post-login return URLs
+- Sign-off checkpoint: confirm auth boundaries, redirect behavior, and user-aware rate limiting before starting full-text enrichment.
+
 ### Phase 7 - Full-Text Enrichment (v1.1)
 
 - Add a second-pass ranking enrichment pipeline after initial summary-based ranking:
@@ -337,7 +382,7 @@ Each phase ends with review/sign-off before proceeding.
 - Add App Runner service configuration:
   - App Runner service connected to ECR repository
   - automatic redeploy on new image push
-  - runtime environment/secrets configuration for LegiScan/Upstash and app settings
+  - runtime environment/secrets configuration for LegiScan, Upstash, Clerk, and app settings
   - set minimum instances to `1` to prevent cold starts (eliminates 5–15s cold start latency at the cost of always-on billing for one instance)
 - Add health check endpoint:
   - implement `GET /api/health` returning HTTP 200 with `{ "status": "ok" }` JSON body
@@ -366,7 +411,7 @@ Each phase ends with review/sign-off before proceeding.
   - branch protection expectation for `main`
   - least-privilege IAM permissions for ECR push and required App Runner interactions
 - Document CI/CD runbook:
-  - required GitHub variables/secrets (no static AWS credentials)
+  - required GitHub variables/secrets for Clerk public configuration and non-AWS app settings (no static AWS credentials)
   - OIDC role setup steps
   - troubleshooting for failed test gate/push
 - Sign-off checkpoint: verify end-to-end automation from merge-to-main through deployment.
@@ -378,7 +423,7 @@ Each phase ends with review/sign-off before proceeding.
 - Use strict TypeScript typing + runtime validation at all external boundaries.
 - Keep each phase small and mergeable, with tests per phase.
 - Full-text enrichment default: always run on all 25 bills in v1.1.
-- Rate limiting default: Upstash-backed `30 requests / 10 minutes` per IP; user-based limits added in a follow-up phase.
+- Rate limiting default: Upstash-backed `30 requests / 10 minutes` per IP before Phase 6.5; after Clerk auth, prefer per-user keys for protected app/API routes with IP fallback for public routes.
 - Deployment target: AWS App Runner using Docker images in AWS ECR with auto redeploy on image updates.
 - CI/CD target: GitHub Actions runs tests before Docker build/push and uses OIDC-based AWS auth.
 
@@ -388,6 +433,9 @@ Each phase ends with review/sign-off before proceeding.
 flowchart TD
     userInput[SearchFormInput] --> rateLimiter[UpstashRateLimiter]
     rateLimiter -->|"429 — limit exceeded"| userInput
+    clerk[Clerk Auth] --> protectedApp["Protected app routes + product APIs"]
+    protectedApp --> userInput
+    protectedApp --> rateLimiter
     rateLimiter --> searchRoute["/api/search"]
     searchRoute --> legiscanClient[LegiScanClient]
     legiscanClient --> getSearch["getSearch (fixed 50 results/page, no limit param)"]
