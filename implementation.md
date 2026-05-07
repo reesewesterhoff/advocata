@@ -22,7 +22,7 @@
 - [x] Phase 2 - LegiScan Server Integration
 - [x] Phase 3 - Unified AI Layer (Gemini + Claude)
 - [x] Phase 4 - Search Form + Submission UX
-- [ ] Phase 5 - Raw LegiScan Data Table
+- [x] Phase 5 - Raw LegiScan Data Table
 - [ ] Phase 6 - AI Interpretation Table + Accordion Rows
 - [ ] Phase 7 - Full-Text Enrichment (v1.1)
 - [ ] Phase 8 - Hardening + Quality Pass
