@@ -1,5 +1,6 @@
 "use client";
 
+import { AiInterpretationTable } from "../_components/ai-interpretation-table";
 import { RawDataTable } from "../_components/raw-data-table";
 import { SearchForm } from "../_components/search-form";
 import type { RequestStage } from "../_hooks/use-bill-analysis-pipeline";
@@ -47,8 +48,17 @@ const SearchPage = () => {
 
       <SearchForm stage={formStage} onSubmit={submit} />
 
-      {search.stage === "success" ? <RawDataTable bills={search.bills} /> : null}
-      {/* Phase 6: <AiInterpretationTable bills={search.bills} rankings={analysis.rankings} /> */}
+      {search.stage !== "idle" ? (
+        <RawDataTable bills={search.bills} error={search.error} stage={search.stage} />
+      ) : null}
+      {search.stage === "success" ? (
+        <AiInterpretationTable
+          bills={search.bills}
+          error={analysis.error}
+          rankings={analysis.rankings}
+          stage={analysis.stage}
+        />
+      ) : null}
     </main>
   );
 };
