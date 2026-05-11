@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   NormalizedBillSchema,
   extractSearchRows,
+  formatBillStatus,
   getLatestTextUrl,
   normalizeBill,
   BILL_STATUS_LABELS,
@@ -291,5 +292,19 @@ describe("BILL_STATUS_LABELS", () => {
       expect(BILL_STATUS_LABELS[i]).toBeDefined();
       expect(typeof BILL_STATUS_LABELS[i]).toBe("string");
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// formatBillStatus
+// ---------------------------------------------------------------------------
+
+describe("formatBillStatus", () => {
+  it("returns the label for a known status code", () => {
+    expect(formatBillStatus(1)).toBe("Introduced");
+  });
+
+  it("returns Unknown for an unknown status code", () => {
+    expect(formatBillStatus(999)).toBe("Unknown");
   });
 });
