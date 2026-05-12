@@ -229,6 +229,15 @@ export type NormalizedBill = z.infer<typeof NormalizedBillSchema>;
 // ---------------------------------------------------------------------------
 
 /**
+ * Formats a LegiScan numeric status code for display.
+ *
+ * @param status - Numeric LegiScan status code.
+ * @returns Human-readable status label, or `"Unknown"` for unrecognized codes.
+ */
+export const formatBillStatus = (status: number): string =>
+  BILL_STATUS_LABELS[status] ?? "Unknown";
+
+/**
  * Extracts the numbered bill rows from a raw getSearch `searchresult` object,
  * skipping the `"summary"` key.
  *

@@ -49,8 +49,22 @@ const getRowByBillNumber = (billNumber: string): HTMLElement => {
 };
 
 describe("RawDataTable", () => {
+  it("renders a pending state while bills are loading", () => {
+    render(<RawDataTable bills={[]} error={null} stage="pending" />);
+
+    expect(screen.getByRole("status")).toHaveTextContent("Fetching bills from LegiScan...");
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  });
+
+  it("renders an error state when the search fails", () => {
+    render(<RawDataTable bills={[]} error="Something went wrong." stage="error" />);
+
+    expect(screen.getByText("Something went wrong.")).toBeInTheDocument();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  });
+
   it("renders an empty state when no bills are present", () => {
-    render(<RawDataTable bills={[]} />);
+    render(<RawDataTable bills={[]} error={null} stage="success" />);
 
     expect(screen.getByText("LegiScan Data")).toBeInTheDocument();
     expect(screen.getByText("No bills matched this search.")).toBeInTheDocument();
@@ -74,6 +88,8 @@ describe("RawDataTable", () => {
             state: "NY",
           }),
         ]}
+        error={null}
+        stage="success"
       />
     );
 
@@ -122,6 +138,8 @@ describe("RawDataTable", () => {
             statusDate: "2026-05-20",
           }),
         ]}
+        error={null}
+        stage="success"
       />
     );
 
@@ -141,7 +159,7 @@ describe("RawDataTable", () => {
   });
 
   it("does not render sort controls for non-sortable columns", () => {
-    render(<RawDataTable bills={[makeBill()]} />);
+    render(<RawDataTable bills={[makeBill()]} error={null} stage="success" />);
 
     expect(screen.queryByRole("button", { name: /Title/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Description/ })).not.toBeInTheDocument();
