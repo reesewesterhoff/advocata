@@ -1,7 +1,7 @@
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 
-/** Number of allowed requests per window per IP. */
+/** Number of allowed requests per window per identity key. */
 const REQUESTS_PER_WINDOW = 30;
 
 /** Sliding-window duration. */
@@ -11,7 +11,7 @@ const WINDOW = "10 m" as const;
 const KEY_PREFIX = "advocata:ratelimit";
 
 /**
- * Result of a rate-limit check for a single IP address.
+ * Result of a rate-limit check for a single identity key.
  */
 export interface RateLimitResult {
   /** Whether the request is permitted under the current rate-limit policy. */
@@ -49,16 +49,16 @@ function getRatelimit(): Ratelimit {
 }
 
 /**
- * Checks whether the given IP address is within the allowed request rate.
+ * Checks whether the given identity key is within the allowed request rate.
  * Uses a sliding-window policy of {@link REQUESTS_PER_WINDOW} requests per
- * {@link WINDOW} per IP.
+ * {@link WINDOW} per identity key.
  *
- * @param ip - The client IP address to check.
+ * @param key - The user-aware or IP-based rate-limit key to check.
  * @returns A RateLimitResult indicating whether the request is permitted.
  */
-export async function checkRateLimit(ip: string): Promise<RateLimitResult> {
+export async function checkRateLimit(key: string): Promise<RateLimitResult> {
   const limiter = getRatelimit();
-  const { success, reset } = await limiter.limit(ip);
+  const { success, reset } = await limiter.limit(key);
   const retryAfterSeconds = Math.max(0, Math.ceil((reset - Date.now()) / 1000));
   return {
     allowed: success,
