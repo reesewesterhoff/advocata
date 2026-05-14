@@ -14,6 +14,10 @@ vi.mock("@/lib/rate-limit", () => ({
   checkRateLimit: vi.fn(),
 }));
 
+vi.mock("@clerk/nextjs/server", () => ({
+  auth: vi.fn(),
+}));
+
 vi.mock("@/lib/ai", async (importOriginal) => {
   const original = await importOriginal<typeof import("@/lib/ai")>();
   return {
@@ -24,6 +28,7 @@ vi.mock("@/lib/ai", async (importOriginal) => {
 
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getAdapter } from "@/lib/ai";
+import { auth } from "@clerk/nextjs/server";
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -57,6 +62,15 @@ const mockAdapter = {
 };
 
 /**
+ * Creates the minimal Clerk auth result needed by route tests.
+ */
+const makeAuthResult = (
+  userId: string | null,
+): Awaited<ReturnType<typeof auth>> => {
+  return { userId } as Awaited<ReturnType<typeof auth>>;
+};
+
+/**
  * Creates a NextRequest for the /api/analyze endpoint.
  */
 function makeRequest(
@@ -79,6 +93,7 @@ function makeRequest(
 // ---------------------------------------------------------------------------
 
 beforeEach(() => {
+  vi.mocked(auth).mockResolvedValue(makeAuthResult("user_123"));
   vi.mocked(checkRateLimit).mockResolvedValue({
     allowed: true,
     retryAfter: null,
@@ -89,6 +104,24 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.clearAllMocks();
+});
+
+// ---------------------------------------------------------------------------
+// Authentication
+// ---------------------------------------------------------------------------
+
+describe("POST /api/analyze — authentication", () => {
+  it("returns 401 when no Clerk user is authenticated", async () => {
+    vi.mocked(auth).mockResolvedValueOnce(makeAuthResult(null));
+
+    const response = await POST(makeRequest(VALID_BODY));
+    const body = await response.json();
+
+    expect(response.status).toBe(401);
+    expect(body.error).toBeDefined();
+    expect(checkRateLimit).not.toHaveBeenCalled();
+    expect(mockAnalyzeBills).not.toHaveBeenCalled();
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -108,6 +141,12 @@ describe("POST /api/analyze — rate limiting", () => {
     expect(response.status).toBe(429);
     expect(body.error).toBeDefined();
     expect(body.retryAfter).toBe(60);
+  });
+
+  it("passes the authenticated user key to checkRateLimit", async () => {
+    await POST(makeRequest(VALID_BODY));
+
+    expect(checkRateLimit).toHaveBeenCalledWith("user:user_123");
   });
 
   it("fails open when the rate-limit backend is unavailable", async () => {

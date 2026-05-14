@@ -3,7 +3,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { AnalyzeRequestSchema, AI_ERROR_CODES } from "@/lib/domain";
 import { AI_ADAPTER_ERROR_CODES, AiAdapterError, getAdapter } from "@/lib/ai";
 import { findModel } from "@/lib/ai/models";
-import { errorResponse, rateLimitGate } from "@/lib/http";
+import { errorResponse, rateLimitGate, requireAuth } from "@/lib/http";
 import { logger } from "@/lib/logger";
 import { validateUserContext } from "@/lib/validation/user-context";
 
@@ -27,8 +27,13 @@ import { validateUserContext } from "@/lib/validation/user-context";
  * @returns A NextResponse with AI rankings or a structured error.
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
+  // --- Authentication ---
+  const authResult = await requireAuth();
+  if (authResult instanceof NextResponse) return authResult;
+  const { userId } = authResult;
+
   // --- Rate limiting ---
-  const rateLimitResponse = await rateLimitGate(request);
+  const rateLimitResponse = await rateLimitGate(request, userId);
   if (rateLimitResponse) return rateLimitResponse;
 
   // --- Parse + validate request body ---
