@@ -24,7 +24,7 @@
 - [x] Phase 4 - Search Form + Submission UX
 - [x] Phase 5 - Raw LegiScan Data Table
 - [x] Phase 6 - AI Interpretation Table + Accordion Rows
-- [ ] Phase 6.5 - Clerk Authentication + User Identity
+- [x] Phase 6.5 - Clerk Authentication + User Identity
 - [ ] Phase 7 - Full-Text Enrichment (v1.1)
 - [ ] Phase 8 - Hardening + Quality Pass
 - [ ] Phase 9 - Deployment (AWS App Runner + ECR)

@@ -12,6 +12,10 @@ vi.mock("@/lib/rate-limit", () => ({
   checkRateLimit: vi.fn(),
 }));
 
+vi.mock("@clerk/nextjs/server", () => ({
+  auth: vi.fn(),
+}));
+
 // Use importOriginal to avoid the Vitest TDZ hoisting issue: vi.mock factories
 // are hoisted before import statements, so referencing imported values (e.g.
 // LegiScanError, LEGISCAN_ERROR_CODES) directly inside the factory causes a
@@ -27,6 +31,7 @@ vi.mock("@/lib/legiscan", async (importOriginal) => {
 
 import { checkRateLimit } from "@/lib/rate-limit";
 import { searchAndNormalize } from "@/lib/legiscan";
+import { auth } from "@clerk/nextjs/server";
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -47,6 +52,15 @@ const makeNormalizedBill = (billId: number): NormalizedBill => ({
 const VALID_BODY = {
   state: "CA",
   query: "education reform",
+};
+
+/**
+ * Creates the minimal Clerk auth result needed by route tests.
+ */
+const makeAuthResult = (
+  userId: string | null,
+): Awaited<ReturnType<typeof auth>> => {
+  return { userId } as Awaited<ReturnType<typeof auth>>;
 };
 
 /**
@@ -72,12 +86,31 @@ function makeRequest(
 // ---------------------------------------------------------------------------
 
 beforeEach(() => {
+  vi.mocked(auth).mockResolvedValue(makeAuthResult("user_123"));
   vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, retryAfter: null });
   vi.mocked(searchAndNormalize).mockResolvedValue([makeNormalizedBill(1)]);
 });
 
 afterEach(() => {
   vi.clearAllMocks();
+});
+
+// ---------------------------------------------------------------------------
+// Authentication
+// ---------------------------------------------------------------------------
+
+describe("POST /api/search — authentication", () => {
+  it("returns 401 when no Clerk user is authenticated", async () => {
+    vi.mocked(auth).mockResolvedValueOnce(makeAuthResult(null));
+
+    const response = await POST(makeRequest(VALID_BODY));
+    const body = await response.json();
+
+    expect(response.status).toBe(401);
+    expect(body.error).toBeDefined();
+    expect(checkRateLimit).not.toHaveBeenCalled();
+    expect(searchAndNormalize).not.toHaveBeenCalled();
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -96,43 +129,10 @@ describe("POST /api/search — rate limiting", () => {
     expect(body.retryAfter).toBe(42);
   });
 
-  it("passes the x-forwarded-for IP to checkRateLimit", async () => {
+  it("passes the authenticated user key to checkRateLimit", async () => {
     await POST(makeRequest(VALID_BODY, { "x-forwarded-for": "10.20.30.40" }));
 
-    expect(checkRateLimit).toHaveBeenCalledWith("10.20.30.40");
-  });
-
-  it("passes the x-real-ip header to checkRateLimit when x-forwarded-for is absent", async () => {
-    const req = new NextRequest("http://localhost/api/search", {
-      method: "POST",
-      body: JSON.stringify(VALID_BODY),
-      headers: {
-        "Content-Type": "application/json",
-        "x-real-ip": "5.6.7.8",
-      },
-    });
-
-    await POST(req);
-
-    expect(checkRateLimit).toHaveBeenCalledWith("5.6.7.8");
-  });
-
-  it("falls back to 'unknown' when no IP header is present", async () => {
-    const req = new NextRequest("http://localhost/api/search", {
-      method: "POST",
-      body: JSON.stringify(VALID_BODY),
-      headers: { "Content-Type": "application/json" },
-    });
-
-    await POST(req);
-
-    expect(checkRateLimit).toHaveBeenCalledWith("unknown");
-  });
-
-  it("uses only the first IP from x-forwarded-for when it contains multiple addresses", async () => {
-    await POST(makeRequest(VALID_BODY, { "x-forwarded-for": "1.1.1.1, 2.2.2.2, 3.3.3.3" }));
-
-    expect(checkRateLimit).toHaveBeenCalledWith("1.1.1.1");
+    expect(checkRateLimit).toHaveBeenCalledWith("user:user_123");
   });
 
   it("fails open when rate limiting backend is unavailable", async () => {

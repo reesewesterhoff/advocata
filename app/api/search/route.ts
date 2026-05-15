@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 
 import { SearchRequestSchema } from "@/lib/domain/search";
-import { errorResponse, rateLimitGate } from "@/lib/http";
+import { errorResponse, rateLimitGate, requireAuth } from "@/lib/http";
 import {
   LegiScanError,
   LEGISCAN_ERROR_CODES,
@@ -26,8 +26,13 @@ import { logger } from "@/lib/logger";
  * @returns A NextResponse with normalized bills or a structured error.
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
+  // --- Authentication ---
+  const authResult = await requireAuth();
+  if (authResult instanceof NextResponse) return authResult;
+  const { userId } = authResult;
+
   // --- Rate limiting ---
-  const rateLimitResponse = await rateLimitGate(request);
+  const rateLimitResponse = await rateLimitGate(request, userId);
   if (rateLimitResponse) return rateLimitResponse;
 
   // --- Parse + validate request body ---
