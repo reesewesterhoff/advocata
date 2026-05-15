@@ -25,7 +25,8 @@
 - [x] Phase 5 - Raw LegiScan Data Table
 - [x] Phase 6 - AI Interpretation Table + Accordion Rows
 - [x] Phase 6.5 - Clerk Authentication + User Identity
-- [ ] Phase 7 - Full-Text Enrichment (v1.1)
+- [ ] Phase 6.6 - MongoDB setup for user data
+- [ ] Phase 7 - Feature development (lots of features, hella features, look at features directory)
 - [ ] Phase 8 - Hardening + Quality Pass
 - [ ] Phase 9 - Deployment (AWS App Runner + ECR)
 - [ ] Phase 10 - CI/CD Automation (GitHub Actions -> ECR -> App Runner)
